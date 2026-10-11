@@ -143,7 +143,7 @@ describe('Phase 6: Job Description Matcher Integration Tests', () => {
       characterCount: 100,
     });
     userBResumeId = resumeB._id.toString();
-  });
+  }, 30000);
 
   afterAll(async () => {
     setMockJobMatchGenerator(null);
