@@ -6,15 +6,24 @@ import { env } from './config/env.js';
 import v1Routes from './routes/index.js';
 import { notFoundHandler } from './middleware/notFoundHandler.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { mongoSanitizeMiddleware } from './middleware/mongoSanitizeMiddleware.js';
+import { globalRateLimiter } from './middleware/rateLimitMiddleware.js';
+import { requestLogger } from './utils/logger.js';
 import { sendSuccess } from './utils/apiResponse.js';
 
 const app = express();
 
-// 1. Security Headers
+// 1. Correlation ID and Request Logging
+app.use(requestLogger);
+
+// 2. Security Headers
 app.use(helmet());
 
 // 2. CORS Policy
-const allowedOrigins = [env.CLIENT_URL];
+const allowedOrigins = (env.CLIENT_URL || '')
+  .split(',')
+  .map((url) => url.trim())
+  .filter(Boolean);
 
 app.use(
   cors({
@@ -36,6 +45,9 @@ app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(cookieParser());
 
+// 4. NoSQL Operator & Dotted Path Injection Protection
+app.use(mongoSanitizeMiddleware);
+
 // Root endpoint
 app.get('/', (req, res) => {
   return sendSuccess(
@@ -49,10 +61,13 @@ app.get('/', (req, res) => {
   );
 });
 
-// 4. API Routes
+// 5. Global API Rate Limiter
+app.use('/api/v1', globalRateLimiter);
+
+// 6. API Routes
 app.use('/api/v1', v1Routes);
 
-// 5. 404 & Centralized Error Handlers
+// 7. 404 & Centralized Error Handlers
 app.use(notFoundHandler);
 app.use(errorHandler);
 

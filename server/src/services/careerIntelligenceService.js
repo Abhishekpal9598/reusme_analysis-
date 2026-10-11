@@ -5,6 +5,7 @@ import { CareerProfile } from '../models/CareerProfile.js';
 import {
   geminiCareerSynthesisSchema,
 } from '../validators/careerIntelligenceValidators.js';
+import { logger, sanitizeString } from '../utils/logger.js';
 import {
   collectUserCareerContext,
   aggregateSkillGaps,
@@ -536,9 +537,9 @@ export async function generateCareerIntelligence(userId, options = {}) {
       // Validate against strict Zod schema
       const validation = geminiCareerSynthesisSchema.safeParse(rawAIOutput);
       if (!validation.success) {
-        console.warn(
+        logger.warn(
           '[CareerIntelligence] Gemini output failed schema validation. Falling back to heuristic engine.',
-          validation.error.issues
+          { issueCount: validation.error.issues.length }
         );
         synthesis = generateHeuristicCareerProfile(
           context,
@@ -552,9 +553,8 @@ export async function generateCareerIntelligence(userId, options = {}) {
         generationSource = 'ai';
       }
     } catch (error) {
-      console.warn(
-        '[CareerIntelligence] Gemini synthesis encountered an error. Falling back to deterministic heuristic engine:',
-        error.message
+      logger.warn(
+        `[CareerIntelligence] Gemini synthesis encountered an error. Falling back to deterministic heuristic engine: ${sanitizeString(error.message)}`
       );
       synthesis = generateHeuristicCareerProfile(
         context,

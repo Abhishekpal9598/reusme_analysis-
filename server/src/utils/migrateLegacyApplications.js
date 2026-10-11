@@ -1,4 +1,5 @@
 import { Application } from '../models/Application.js';
+import { logger, sanitizeString } from './logger.js';
 
 /**
  * Idempotent migration utility to normalize legacy Application statuses
@@ -19,13 +20,13 @@ export async function migrateLegacyApplicationStatuses() {
 
     const totalModified = (countInterviewing.modifiedCount || 0) + (countOffered.modifiedCount || 0);
     if (totalModified > 0) {
-      console.log(
+      logger.info(
         `[Migration] Normalized ${countInterviewing.modifiedCount || 0} 'Interviewing' and ${countOffered.modifiedCount || 0} 'Offered' application records.`
       );
     }
     return { modifiedCount: totalModified };
   } catch (error) {
-    console.warn('[Migration] Note: Application status migration check encountered an error:', error.message);
+    logger.warn(`[Migration] Note: Application status migration check encountered an error: ${sanitizeString(error.message)}`);
     return { error: error.message };
   }
 }

@@ -5,20 +5,40 @@ const storage = multer.memoryStorage();
 
 const ALLOWED_MIME_TYPES = [
   'application/pdf',
+  'application/x-pdf',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'application/msword',
   'text/plain',
-  'application/octet-stream', // Some browsers send octet-stream for docx
+  'text/markdown',
+  'application/octet-stream', // Some browsers / OS send octet-stream for docx
+  'application/zip', // Some legacy Windows send application/zip for docx
 ];
 
 const ALLOWED_EXTENSIONS = ['.pdf', '.docx', '.txt'];
 
 const fileFilter = (req, file, cb) => {
-  const originalName = file.originalname.toLowerCase();
+  const originalName = (file.originalname || '').toLowerCase();
   const hasValidExt = ALLOWED_EXTENSIONS.some((ext) => originalName.endsWith(ext));
 
   if (!hasValidExt) {
     return cb(new Error('Invalid file type. Supported formats: .pdf, .docx, .txt'), false);
+  }
+
+  // Reject explicitly dangerous or mismatched MIME types
+  const mime = (file.mimetype || '').toLowerCase();
+  if (mime) {
+    const isDangerousMime =
+      mime.includes('javascript') ||
+      mime.includes('html') ||
+      mime.includes('executable') ||
+      mime.includes('msdownload') ||
+      mime.startsWith('image/') ||
+      mime.startsWith('video/') ||
+      mime.startsWith('audio/');
+
+    if (isDangerousMime || !ALLOWED_MIME_TYPES.includes(mime)) {
+      return cb(new Error(`Invalid or unsupported file MIME type: ${file.mimetype}`), false);
+    }
   }
 
   cb(null, true);

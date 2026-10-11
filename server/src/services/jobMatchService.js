@@ -6,6 +6,7 @@ import {
   MATCH_DISCLAIMER,
 } from '../validators/jobMatchValidators.js';
 import { GeminiServiceError } from './geminiService.js';
+import { logger } from '../utils/logger.js';
 
 const JOB_MATCH_SYSTEM_INSTRUCTION = `You are CareerAI's Principal Technical Recruiter and Career Strategist.
 Your mission is to perform a rigorous, evidence-based matching audit comparing a candidate's resume against a target job description.
@@ -335,7 +336,9 @@ export async function matchResumeWithJob(resumeText, jobDescription, meta = {}) 
   // Validate output schema with Zod
   const validationResult = geminiJobMatchResponseSchema.safeParse(parsedJson);
   if (!validationResult.success) {
-    console.error('[Zod Job Match Validation Errors]:', JSON.stringify(validationResult.error.issues, null, 2));
+    logger.warn('[JobMatch] AI output failed schema validation', {
+      issueCount: validationResult.error.issues.length,
+    });
     throw new GeminiServiceError(
       'AI job match output failed schema validation.',
       422,

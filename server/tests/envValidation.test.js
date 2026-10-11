@@ -117,5 +117,27 @@ describe('Environment Configuration Validation (env.js)', () => {
       expect(result.success).toBe(false);
       expect(result.formattedErrors).not.toContain(sensitiveToken);
     });
+
+    it('should default COOKIE_SAMESITE to lax and allow valid cookie options', () => {
+      const result = validateEnv({
+        ...validProductionEnv,
+        COOKIE_SAMESITE: 'strict',
+        COOKIE_DOMAIN: '.careerai.com',
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.data.COOKIE_SAMESITE).toBe('strict');
+      expect(result.data.COOKIE_DOMAIN).toBe('.careerai.com');
+    });
+
+    it('should reject invalid COOKIE_SAMESITE values', () => {
+      const result = validateEnv({
+        ...validProductionEnv,
+        COOKIE_SAMESITE: 'invalid_mode',
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.formattedErrors).toContain('COOKIE_SAMESITE');
+    });
   });
 });

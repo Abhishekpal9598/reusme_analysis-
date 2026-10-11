@@ -39,9 +39,10 @@ export const listApplications = async (req, res, next) => {
 
     const query = { userId: req.user._id };
 
-    // Search on companyName or positionTitle
+    // Search on companyName or positionTitle (bounded to 100 characters to prevent ReDoS)
     if (q && q.trim()) {
-      const sanitized = escapeRegex(q.trim());
+      const truncated = q.trim().slice(0, 100);
+      const sanitized = escapeRegex(truncated);
       query.$or = [
         { companyName: { $regex: sanitized, $options: 'i' } },
         { positionTitle: { $regex: sanitized, $options: 'i' } },

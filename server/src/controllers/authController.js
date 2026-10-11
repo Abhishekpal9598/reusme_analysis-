@@ -3,6 +3,11 @@ import { User } from '../models/User.js';
 import { registerSchema, loginSchema } from '../validators/authValidators.js';
 import { generateToken, setAuthCookie, clearAuthCookie } from '../utils/token.js';
 import { sendSuccess, sendError } from '../utils/apiResponse.js';
+import {
+  getAccountLockStatus,
+  recordFailedLogin,
+  recordSuccessfulLogin,
+} from '../utils/accountBackoff.js';
 
 const BCRYPT_SALT_ROUNDS = 10;
 
@@ -87,9 +92,22 @@ export const login = async (req, res, next) => {
 
     const { email, password } = validation.data;
 
+    // Progressive account backoff: Check if account is locked out before expensive bcrypt
+    const lockStatus = getAccountLockStatus(email);
+    if (lockStatus.isLocked) {
+      res.setHeader('Retry-After', String(lockStatus.remainingSeconds));
+      return sendError(
+        res,
+        429,
+        'TOO_MANY_REQUESTS',
+        `Account login temporarily locked due to multiple failed attempts. Please try again after ${lockStatus.remainingSeconds} seconds.`
+      );
+    }
+
     // Retrieve user and explicitly select passwordHash
     const user = await User.findOne({ email }).select('+passwordHash');
     if (!user) {
+      recordFailedLogin(email);
       return sendError(
         res,
         401,
@@ -101,6 +119,7 @@ export const login = async (req, res, next) => {
     // Compare passwords with constant-time bcrypt verification
     const isMatch = await bcrypt.compare(password, user.passwordHash);
     if (!isMatch) {
+      recordFailedLogin(email);
       return sendError(
         res,
         401,
@@ -108,6 +127,9 @@ export const login = async (req, res, next) => {
         'Invalid email or password'
       );
     }
+
+    // Successful login: reset failed login attempts
+    recordSuccessfulLogin(email);
 
     // Generate JWT and set HttpOnly session cookie
     const token = generateToken(user);

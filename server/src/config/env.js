@@ -22,10 +22,26 @@ export const envSchema = z
     GEMINI_API_KEY: z.string().trim().optional(),
     GEMINI_MODEL: z.string().default('gemini-3.8-flash'),
     GEMINI_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
+    PARSER_TIMEOUT_MS: z.coerce.number().int().positive().default(10000),
     JWT_SECRET: z.string().min(16).default(DEV_FALLBACK_JWT_SECRET),
     JWT_EXPIRES_IN: z.string().default('7d'),
+    COOKIE_SAMESITE: z.enum(['lax', 'strict', 'none']).default('lax'),
+    COOKIE_DOMAIN: z.string().trim().optional(),
+    RATE_LIMIT_GLOBAL_MAX: z.coerce.number().int().positive().default(300),
+    RATE_LIMIT_AUTH_MAX: z.coerce.number().int().positive().default(20),
+    RATE_LIMIT_AI_MAX: z.coerce.number().int().positive().default(30),
+    RATE_LIMIT_ACCOUNT_MAX: z.coerce.number().int().positive().default(5),
+    REDIS_URL: z.string().trim().optional(),
   })
   .superRefine((data, ctx) => {
+    if (data.COOKIE_SAMESITE === 'none' && data.NODE_ENV !== 'production' && data.NODE_ENV !== 'test') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['COOKIE_SAMESITE'],
+        message: 'COOKIE_SAMESITE="none" requires HTTPS and can only be enabled in production.',
+      });
+    }
+
     if (data.NODE_ENV === 'production') {
       if (!data.JWT_SECRET || data.JWT_SECRET.trim() === '') {
         ctx.addIssue({

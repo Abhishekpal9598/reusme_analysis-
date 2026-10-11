@@ -20,10 +20,11 @@ export const uploadResume = async (req, res, next) => {
     try {
       parseResult = await parseDocument(file.buffer, file.originalname);
     } catch (parseErr) {
+      const isTimeout = parseErr.name === 'ParserTimeoutError' || parseErr.code === 'PARSER_TIMEOUT';
       return sendError(
         res,
         422,
-        'PARSER_ERROR',
+        isTimeout ? 'PARSER_TIMEOUT' : 'PARSER_ERROR',
         parseErr.message || 'Unable to parse document text. Please ensure the file is not corrupted or password-protected.'
       );
     }

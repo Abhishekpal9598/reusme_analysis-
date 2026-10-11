@@ -1,8 +1,8 @@
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env.js';
 
-const COOKIE_NAME = 'token';
-const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+export const COOKIE_NAME = 'token';
+export const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
  * Generate signed JWT for authenticated user identity
@@ -26,28 +26,43 @@ export const verifyToken = (token) => {
 };
 
 /**
+ * Return standardized authentication cookie options based on environment and topology
+ */
+export const getAuthCookieOptions = (customEnv = env) => {
+  const isProduction = customEnv.NODE_ENV === 'production';
+  const sameSite = customEnv.COOKIE_SAMESITE || 'lax';
+
+  const options = {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite,
+    path: '/',
+  };
+
+  if (customEnv.COOKIE_DOMAIN) {
+    options.domain = customEnv.COOKIE_DOMAIN;
+  }
+
+  return options;
+};
+
+/**
  * Attach HttpOnly JWT session cookie to Express response
  */
 export const setAuthCookie = (res, token) => {
   res.cookie(COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: env.NODE_ENV === 'production',
-    sameSite: env.NODE_ENV === 'production' ? 'strict' : 'lax',
+    ...getAuthCookieOptions(),
     maxAge: SEVEN_DAYS_MS,
-    path: '/',
   });
 };
 
 /**
  * Clear authentication cookie upon logout
+ * Uses matching attributes (path, httpOnly, secure, sameSite, domain) to ensure browser cleanly evicts cookie
  */
 export const clearAuthCookie = (res) => {
-  res.clearCookie(COOKIE_NAME, {
-    httpOnly: true,
-    secure: env.NODE_ENV === 'production',
-    sameSite: env.NODE_ENV === 'production' ? 'strict' : 'lax',
-    path: '/',
-  });
+  res.clearCookie(COOKIE_NAME, getAuthCookieOptions());
 };
 
-export default { generateToken, verifyToken, setAuthCookie, clearAuthCookie };
+export default { generateToken, verifyToken, getAuthCookieOptions, setAuthCookie, clearAuthCookie, COOKIE_NAME, SEVEN_DAYS_MS };
+
