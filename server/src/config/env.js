@@ -17,7 +17,25 @@ export const envSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
     PORT: z.coerce.number().int().positive().default(5000),
-    CLIENT_URL: z.string().url().default('http://localhost:5173'),
+    CLIENT_URL: z
+      .string()
+      .default('http://localhost:5173')
+      .refine(
+        (val) => {
+          const urls = val.split(',').map((u) => u.trim()).filter(Boolean);
+          if (urls.length === 0) return false;
+          return urls.every((u) => {
+            try {
+              const parsed = new URL(u);
+              return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+            } catch {
+              return false;
+            }
+          });
+        },
+        { message: 'CLIENT_URL must contain valid http or https URL(s)' }
+      ),
+    CORS_ALLOWED_ORIGINS: z.string().trim().optional(),
     MONGODB_URI: z.string().optional(),
     GEMINI_API_KEY: z.string().trim().optional(),
     GEMINI_MODEL: z.string().default('gemini-3.8-flash'),
