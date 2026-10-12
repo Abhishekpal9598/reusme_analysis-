@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Bot, Menu, X, LayoutDashboard, Home, LogIn, UserPlus, LogOut, User, FileText, Target, MessageSquareCode, Kanban, Sparkles } from 'lucide-react';
 import { Button } from '../components/common/Button';
-import { Badge } from '../components/common/Badge';
 import { useAuth } from '../hooks/useAuth';
 
 export const Navbar = () => {
@@ -52,10 +51,7 @@ export const Navbar = () => {
               <div className="w-9 h-9 rounded-lg bg-emerald-600/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
                 <Bot className="w-5 h-5" />
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-lg font-bold tracking-tight text-white">CareerAI</span>
-                <Badge variant="teal" size="sm">Phase 9</Badge>
-              </div>
+              <span className="text-lg font-bold tracking-tight text-white">CareerAI</span>
             </Link>
 
             {/* Desktop Navigation Links */}
